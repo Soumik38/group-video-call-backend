@@ -1,7 +1,9 @@
 const express = require('express')
+  http = require('http')
+  // .createServer(app)
 const app = express()
-const http = require('http').createServer(app)
-const io = require('socket.io')(http)
+const server = http.createServer(app);
+var io = require('socket.io').listen(server);
 const PORT = process.env.PORT || 4000
 const path = require('path')
 
@@ -117,6 +119,6 @@ io.on('connection', (socket)=>{
   })
 })
 
-http.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Connected : ${PORT}`);
 })
