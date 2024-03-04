@@ -1,11 +1,15 @@
 const express = require('express')
-  http = require('http')
-  // .createServer(app)
 const app = express()
-const server = http.createServer(app);
-var io = require('socket.io').listen(server);
+const server = require('http').createServer(app)
+
+const io=require('socket.io')(server,{  //socket io server
+  cors:true
+})
+
 const PORT = process.env.PORT || 4000
-const path = require('path')
+
+require('./db/connection')
+const Users=require('./models/Users')
 
 let socketList = {}
 
@@ -33,14 +37,6 @@ app.use(cors())
 //   })
 // }
 
-// Route
-app.get('/ping', (req, res) => {
-  res
-    .send({
-      success: true,
-    })
-    .status(200)
-})
 
 // Socket
 io.on('connection', (socket)=>{
@@ -126,6 +122,69 @@ io.on('connection', (socket)=>{
       .emit('FE-toggle-camera', { userId: socket.id, switchTarget })
   })
 })
+
+
+//Routes
+app.get('/',cors(),(req,res)=>{
+  res.send('Backend')
+})
+
+app.post('/signup',cors(),async (req,res)=>{
+  // console.log(res)
+  const{name,email,pass}=req.body
+  try{
+      const check=await Users.findOne({email:email})
+      if(check){
+          res.json('exists')
+      }else{
+          res.json('notexists')
+          const data={
+              name:name,
+              email:email,
+              pass:pass
+          }
+          await Users.insertMany([data])
+      }
+  }catch(e){
+      console.log(e)
+      res.json('notexists')
+  }
+})
+
+app.post('/signin',cors(),async (req,res)=>{
+  const{email,pass}=req.body
+  try{
+      const check=await Users.findOne({email:email})
+      if(check){
+          if(check.pass===pass){
+              res.json('authorize')
+          }else{
+              res.json('wrongpass')
+          }
+      }else{
+          res.json('notexists')
+      }
+  }catch(e){
+      res.json('notexists')
+  }
+})
+
+app.get('/user/:email',cors(), async (req, res) => {
+  try {
+    const email = req.params.email
+    const user = await Users.findOne({ email })
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    res.json({ name: user.name })
+  } catch (error) {
+    console.error('Error fetching user by email:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 
 server.listen(PORT, () => {
   console.log(`Connected : ${PORT}`);
